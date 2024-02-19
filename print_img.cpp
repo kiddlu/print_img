@@ -90,7 +90,7 @@ static inline void get_ideal_image_size(int      *width,
     }
 }
 
-static inline int print_rgb_rawdata_compat(unsigned char *img,
+static inline int print_rgb_rawdata_compat(unsigned char *rgbraw,
                                            unsigned int   width,
                                            unsigned int   height)
 {
@@ -102,7 +102,7 @@ static inline int print_rgb_rawdata_compat(unsigned char *img,
         unsigned char b;
     } pxcolor_t;
 
-    pxcolor_t *data = (pxcolor_t *)img;
+    pxcolor_t *px = (pxcolor_t *)rgbraw;
     for (unsigned int d = 0; d < width * height; d++)
     {
         if (d % width == 0 && d != 0)
@@ -111,7 +111,7 @@ static inline int print_rgb_rawdata_compat(unsigned char *img,
             printf("\n");
         }
 
-        pxcolor_t *c = data + d;
+        pxcolor_t *c = px + d;
         printf("\033[48;2;%03u;%03u;%03um ", c->r, c->g, c->b);
     }
     printf("\033[0m");
@@ -274,7 +274,7 @@ static inline int cstd_bitcount(unsigned int n)
 
 // Return a chardata struct with the given code point and corresponding averag
 // fg and bg colors.
-static inline chardata_t create_chardata(unsigned char *image,
+static inline chardata_t create_chardata(unsigned char *rgbraw,
                                          int            x0,
                                          int            y0,
                                          int            width,
@@ -308,7 +308,7 @@ static inline chardata_t create_chardata(unsigned char *image,
             pixel_index = ((x0 + x) + width * (y0 + y)) * 3;
             for (int i = 0; i < 3; i++)
             {
-                avg[i] += *(image + pixel_index + i);
+                avg[i] += *(rgbraw + pixel_index + i);
             }
             mask = mask >> 1;
         }
@@ -331,7 +331,7 @@ static inline chardata_t create_chardata(unsigned char *image,
 
 // Find the best character and colors for a 4x8 part of the image at the given
 // position
-static inline chardata_t find_chardata(unsigned char *image,
+static inline chardata_t find_chardata(unsigned char *rgbraw,
                                        int            x0,
                                        int            y0,
                                        int            width,
@@ -352,7 +352,7 @@ static inline chardata_t find_chardata(unsigned char *image,
       long color = 0;
       pixel_index = ((x0 + x) + width*(y0 + y)) * 3;
       for (int i = 0; i < 3; i++) {
-        int d = *(image + pixel_index + i);
+        int d = *(rgbraw + pixel_index + i);
         min[i] = cstd_min(min[i], d);
         max[i] = cstd_max(max[i], d);
         color = (color << 8) | d;
@@ -387,7 +387,7 @@ static inline chardata_t find_chardata(unsigned char *image,
             pixel_index = ((x0 + x) + width * (y0 + y)) * 3;
             for (int i = 0; i < 3; i++)
             {
-                int d  = *(image + pixel_index + i);
+                int d  = *(rgbraw + pixel_index + i);
                 min[i] = cstd_min(min[i], d);
                 max[i] = cstd_max(max[i], d);
                 color  = (color << 8) | d;
@@ -418,7 +418,7 @@ static inline chardata_t find_chardata(unsigned char *image,
                     int shift = 16 - 8 * i;
                     int c1    = (max_count_color_1 >> shift) & 255;
                     int c2    = (max_count_color_2 >> shift) & 255;
-                    int c     = *(image + pixel_index + i);
+                    int c     = *(rgbraw + pixel_index + i);
                     d1 += (c1 - c) * (c1 - c);
                     d2 += (c2 - c) * (c2 - c);
                 }
@@ -455,7 +455,7 @@ static inline chardata_t find_chardata(unsigned char *image,
             {
                 bits        = bits << 1;
                 pixel_index = ((x0 + x) + width * (y0 + y)) * 3;
-                if (*(image + pixel_index + split_index) > split_value)
+                if (*(rgbraw + pixel_index + split_index) > split_value)
                 {
                     bits |= 1;
                 }
@@ -510,7 +510,7 @@ static inline chardata_t find_chardata(unsigned char *image,
         }
         return result;
     }
-    return create_chardata(image, x0, y0, width, height, codepoint,
+    return create_chardata(rgbraw, x0, y0, width, height, codepoint,
                            best_pattern);
 }
 
@@ -561,7 +561,7 @@ static inline void print_codepoint(int codepoint)
 }
 
 static inline int trans_to_chardata(chardata_t    *cha,
-                                    unsigned char *image,
+                                    unsigned char *rgbraw,
                                     int            width,
                                     int            height)
 {
@@ -570,7 +570,7 @@ static inline int trans_to_chardata(chardata_t    *cha,
     {
         for (int x = 0; x < width; x = x + 4)
         {
-            *cdata = find_chardata(image, x, y, width, height);
+            *cdata = find_chardata(rgbraw, x, y, width, height);
             cdata++;
         }
     }
@@ -580,7 +580,7 @@ static inline int trans_to_chardata(chardata_t    *cha,
 struct trans_thread_args
 {
     chardata_t    *ansi_char;
-    unsigned char *image;
+    unsigned char *rgbraw;
     int            width;
     int            height;
 };
@@ -588,12 +588,14 @@ struct trans_thread_args
 void *trans_to_chardata_thread(void *arg)
 {
     struct trans_thread_args *args = (struct trans_thread_args *)arg;
-    trans_to_chardata(args->ansi_char, args->image, args->width, args->height);
+    trans_to_chardata(args->ansi_char, args->rgbraw, args->width, args->height);
 
     return NULL;
 }
 
-static inline int print_rgb_rawdata(unsigned char *image, int width, int height)
+static inline int print_rgb_rawdata(unsigned char *rgbraw,
+                                    int            width,
+                                    int            height)
 {
     int char_width  = (width / 4);
     int char_height = (height / 8);
@@ -611,7 +613,7 @@ static inline int print_rgb_rawdata(unsigned char *image, int width, int height)
     {
         trans_to_chardata(
             &chardata_scheme[char_width * char_height / THREAD_NUM * thread_id],
-            image + (width * height / THREAD_NUM * thread_id) * 3, width,
+            rgbraw + (width * height / THREAD_NUM * thread_id) * 3, width,
             height / THREAD_NUM);
     }
 #else
@@ -634,7 +636,7 @@ static inline int print_rgb_rawdata(unsigned char *image, int width, int height)
     {
         args[num].ansi_char =
             &chardata_scheme[char_width * char_height / THREAD_NUM * num];
-        args[num].image  = image + (width * height / THREAD_NUM * num) * 3;
+        args[num].rgbraw  = rgbraw + (width * height / THREAD_NUM * num) * 3;
         args[num].width  = width;
         args[num].height = height / THREAD_NUM;
 

@@ -15,12 +15,17 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
+#define MULTI_THREAD_TRANSFORM
+//#define USING_CPP_MAP
+
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb/stb_image.h"
 #define STB_IMAGE_RESIZE_IMPLEMENTATION
 #include "stb/stb_image_resize.h"
 
-#define MULTI_THREAD_TRANSFORM
+#ifdef USING_CPP_MAP
+#include <map>
+#endif
 
 #define TERM_PADDING_X 8
 #define TERM_PADDING_Y 4
@@ -342,41 +347,45 @@ static inline chardata_t find_chardata(unsigned char *rgbraw,
     int pixel_index = 0;
 
 // c++ map
-#if 0
-#include <map>
-  std::map<long,int> count_per_color;
+#ifdef USING_CPP_MAP
+    std::map<long, int> count_per_color;
 
-  // Determine the minimum and maximum value for each color channel
-  for (int y = 0; y < 8; y++) {
-    for (int x = 0; x < 4; x++) {
-      long color = 0;
-      pixel_index = ((x0 + x) + width*(y0 + y)) * 3;
-      for (int i = 0; i < 3; i++) {
-        int d = *(rgbraw + pixel_index + i);
-        min[i] = cstd_min(min[i], d);
-        max[i] = cstd_max(max[i], d);
-        color = (color << 8) | d;
-      }
-      count_per_color[color]++;
+    // Determine the minimum and maximum value for each color channel
+    for (int y = 0; y < 8; y++)
+    {
+        for (int x = 0; x < 4; x++)
+        {
+            long color  = 0;
+            pixel_index = ((x0 + x) + width * (y0 + y)) * 3;
+            for (int i = 0; i < 3; i++)
+            {
+                int d  = *(rgbraw + pixel_index + i);
+                min[i] = cstd_min(min[i], d);
+                max[i] = cstd_max(max[i], d);
+                color  = (color << 8) | d;
+            }
+            count_per_color[color]++;
+        }
     }
-  }
 
-  std::multimap<int,long> color_per_count;
-  for (auto i = count_per_color.begin(); i != count_per_color.end(); ++i) {
-    color_per_count.insert(std::pair<int,long>(i->second, i->first));
-  }
+    std::multimap<int, long> color_per_count;
+    for (auto i = count_per_color.begin(); i != count_per_color.end(); ++i)
+    {
+        color_per_count.insert(std::pair<int, long>(i->second, i->first));
+    }
 
-  auto iter = color_per_count.rbegin();
-  int count2 = iter->first;
-  long max_count_color_1 = iter->second;
-  long max_count_color_2 = max_count_color_1;
-  if ((++iter) != color_per_count.rend()) {
-    count2 += iter->first;
-    max_count_color_2 = iter->second;
-  }
+    auto iter              = color_per_count.rbegin();
+    int  count2            = iter->first;
+    long max_count_color_1 = iter->second;
+    long max_count_color_2 = max_count_color_1;
+    if ((++iter) != color_per_count.rend())
+    {
+        count2 += iter->first;
+        max_count_color_2 = iter->second;
+    }
 
-  unsigned int bits = 0;
-  bool direct = count2 > (8*4) / 2;
+    unsigned int bits   = 0;
+    bool         direct = count2 > (8 * 4) / 2;
 #else
     // Determine the minimum and maximum value for each color channel
     for (int y = 0; y < 8; y++)
@@ -636,7 +645,7 @@ static inline int print_rgb_rawdata(unsigned char *rgbraw,
     {
         args[num].ansi_char =
             &chardata_scheme[char_width * char_height / THREAD_NUM * num];
-        args[num].rgbraw  = rgbraw + (width * height / THREAD_NUM * num) * 3;
+        args[num].rgbraw = rgbraw + (width * height / THREAD_NUM * num) * 3;
         args[num].width  = width;
         args[num].height = height / THREAD_NUM;
 

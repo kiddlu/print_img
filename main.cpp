@@ -18,34 +18,51 @@ unsigned int get_file_size(FILE *fp)
 
 void usage(void)
 {
-    printf("useage: exe in\n");
+    printf("useage: pimg [-w width] [-h height] [-c compat] image_path\n");
 }
 
 int main(int argc, char *argv[])
 {
-    if (argc != 2)
+
+    unsigned int opt_width  = 0;
+    unsigned int opt_height = 0;
+    int          compat     = 0;
+
+    int c;
+    while ((c = getopt(argc, argv, "w:h:c")) != EOF)
     {
-        usage();
-        return -1;
+        switch (c)
+        {
+            case 'w':
+                opt_width = (unsigned int)atoi(optarg);
+                break;
+            case 'h':
+                opt_height = (unsigned int)atoi(optarg);
+                break;
+            case 'c':
+                compat = 1;
+                break;
+            default:
+                break;
+        }
     }
-    else if (0 != access(argv[1], F_OK))
+
+    if (0 != access(argv[argc - 1], F_OK))
     {
         usage();
         return -1;
     }
 
-    FILE    *fp  = fopen(argv[1], "rb");
+    FILE    *fp  = fopen(argv[argc - 1], "rb");
     uint32_t len = get_file_size(fp);
 
     char *data = (char *)malloc(len);
     fread(data, len, 1, fp);
+    fclose(fp);
 
-    uint32_t olen;
-    char    *output = (char *)malloc(len * 2);
+    print_img((unsigned char *)data, len, opt_width, opt_height, compat);
 
-    print_img((unsigned char *)data, len, 0, 0, 0);
-
-    // print_img((unsigned char *)data, len, 0, 0, 1);
+    free(data);
 
     return 0;
 }

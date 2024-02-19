@@ -90,9 +90,9 @@ static inline void get_ideal_image_size(int      *width,
     }
 }
 
-static inline int print_raw_img_compat(unsigned char *img,
-                                       unsigned int   width,
-                                       unsigned int   height)
+static inline int print_rgb_rawdata_compat(unsigned char *img,
+                                           unsigned int   width,
+                                           unsigned int   height)
 {
 
     typedef struct
@@ -593,16 +593,16 @@ void *trans_to_chardata_thread(void *arg)
     return NULL;
 }
 
-static inline int print_raw_img(unsigned char *image, int width, int height)
+static inline int print_rgb_rawdata(unsigned char *image, int width, int height)
 {
     int char_width  = (width / 4);
     int char_height = (height / 8);
     int char_length = char_width * char_height * sizeof(chardata_t);
 
-    chardata_t *chardata_scheme = (chardata_t *)malloc(char_length);
+    //    printf("char_width %d, height %d, length %d\n", char_width,
+    //    char_height, char_length);
 
-//    printf("char_width %d, height %d, length %d\n", char_width, char_height,
-//           char_length);
+    chardata_t *chardata_scheme = (chardata_t *)malloc(char_length);
 
 // trans
 #ifndef MULTI_THREAD_TRANSFORM
@@ -616,11 +616,11 @@ static inline int print_raw_img(unsigned char *image, int width, int height)
     }
 #else
     int          THREAD_NUM = 1;
-    for (int i = 8; i >= 2; i--)
+    for (int t = 8; t >= 2; t--)
     {
-        if (char_height % i == 0)
+        if (char_height % t == 0)
         {
-            THREAD_NUM = i;
+            THREAD_NUM = t;
             break;
         }
     }
@@ -748,11 +748,11 @@ int print_img(unsigned char *img,
 
     if (compat == 1)
     {
-        print_raw_img_compat(data, desired_width, desired_height);
+        print_rgb_rawdata_compat(data, desired_width, desired_height);
     }
     else
     {
-        print_raw_img(data, desired_width, desired_height);
+        print_rgb_rawdata(data, desired_width, desired_height);
     }
 
     stbi_image_free(data);

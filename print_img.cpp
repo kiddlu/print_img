@@ -620,7 +620,7 @@ static inline int print_raw_img(unsigned char *image, int width, int height)
     int          THREAD_NUM = 1;
     for (int i = 8; i >= 2; i--)
     {
-        if (char_width * char_height % i == 0)
+        if (char_height % i == 0)
         {
             THREAD_NUM = i;
             break;

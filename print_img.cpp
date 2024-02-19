@@ -20,7 +20,7 @@
 #define STB_IMAGE_RESIZE_IMPLEMENTATION
 #include "stb/stb_image_resize.h"
 
-//#define MULTI_THREAD_TRANSFORM
+#define MULTI_THREAD_TRANSFORM
 
 #define TERM_PADDING_X 8
 #define TERM_PADDING_Y 4
@@ -90,9 +90,9 @@ static inline void get_ideal_image_size(int      *width,
     }
 }
 
-static inline int print_raw_img_compat(unsigned char   *img,
-                                       unsigned int width,
-                                       unsigned int height)
+static inline int print_raw_img_compat(unsigned char *img,
+                                       unsigned int   width,
+                                       unsigned int   height)
 {
 
     typedef struct
@@ -275,12 +275,12 @@ static inline int cstd_bitcount(unsigned int n)
 // Return a chardata struct with the given code point and corresponding averag
 // fg and bg colors.
 static inline chardata_t create_chardata(unsigned char *image,
-                                             int            x0,
-                                             int            y0,
-                                             int            width,
-                                             int            heigh,
-                                             int            codepoint,
-                                             int            pattern)
+                                         int            x0,
+                                         int            y0,
+                                         int            width,
+                                         int            heigh,
+                                         int            codepoint,
+                                         int            pattern)
 {
     chardata_t result;
     memset(&result, 0, sizeof(chardata_t));
@@ -332,10 +332,10 @@ static inline chardata_t create_chardata(unsigned char *image,
 // Find the best character and colors for a 4x8 part of the image at the given
 // position
 static inline chardata_t find_chardata(unsigned char *image,
-                                           int            x0,
-                                           int            y0,
-                                           int            width,
-                                           int            height)
+                                       int            x0,
+                                       int            y0,
+                                       int            width,
+                                       int            height)
 {
     int min[3]      = {255, 255, 255};
     int max[3]      = {0};
@@ -399,8 +399,8 @@ static inline chardata_t find_chardata(unsigned char *image,
     long max_count_color_1 = 0;
     long max_count_color_2 = 0;
 
-    unsigned int             bits   = 0;
-    bool                     direct = false;
+    unsigned int bits       = 0;
+    bool         direct     = false;
 #endif
 
     if (direct)
@@ -503,15 +503,15 @@ static inline chardata_t find_chardata(unsigned char *image,
         }
         for (int i = 0; i < 3; i++)
         {
-            int shift         = 16 - 8 * i;
+            int shift          = 16 - 8 * i;
             result.fg_color[i] = (max_count_color_2 >> shift) & 255;
             result.bg_color[i] = (max_count_color_1 >> shift) & 255;
-            result.codepoint  = codepoint;
+            result.codepoint   = codepoint;
         }
         return result;
     }
     return create_chardata(image, x0, y0, width, height, codepoint,
-                          best_pattern);
+                           best_pattern);
 }
 
 static inline int clamp_byte(int value)
@@ -560,10 +560,10 @@ static inline void print_codepoint(int codepoint)
     }
 }
 
-static inline int trans_to_chardata(chardata_t *cha,
-                                    unsigned char   *image,
-                                    int              width,
-                                    int              height)
+static inline int trans_to_chardata(chardata_t    *cha,
+                                    unsigned char *image,
+                                    int            width,
+                                    int            height)
 {
     chardata_t *cdata = cha;
     for (int y = 0; y < height; y = y + 8)
@@ -579,10 +579,10 @@ static inline int trans_to_chardata(chardata_t *cha,
 
 struct trans_thread_args
 {
-    chardata_t *ansi_char;
-    unsigned char   *image;
-    int              width;
-    int              height;
+    chardata_t    *ansi_char;
+    unsigned char *image;
+    int            width;
+    int            height;
 };
 
 void *trans_to_chardata_thread(void *arg)
@@ -599,19 +599,36 @@ static inline int print_raw_img(unsigned char *image, int width, int height)
     int char_height = (height / 8);
     int char_length = char_width * char_height * sizeof(chardata_t);
 
-    chardata_t *chardata_scheme  = (chardata_t *)malloc(char_length);
-    chardata_t *cur_chardata     = chardata_scheme;
-    chardata_t *last_chardata    = chardata_scheme;
+    chardata_t *chardata_scheme = (chardata_t *)malloc(char_length);
+    chardata_t *cur_chardata    = chardata_scheme;
+    chardata_t *last_chardata   = chardata_scheme;
+
+//    printf("char_width %d, height %d, length %d\n", char_width, char_height,
+//           char_length);
 
 // trans
 #ifndef MULTI_THREAD_TRANSFORM
 #define THREAD_NUM (1)
-    for(int thread_id=0; thread_id < THREAD_NUM; thread_id++) {
-        trans_to_chardata(&cur_chardata[char_width * char_height / THREAD_NUM * thread_id], 
-	    image + (width * height / THREAD_NUM * thread_id) * 3, width, height / THREAD_NUM);
+    for (int thread_id = 0; thread_id < THREAD_NUM; thread_id++)
+    {
+        trans_to_chardata(
+            &cur_chardata[char_width * char_height / THREAD_NUM * thread_id],
+            image + (width * height / THREAD_NUM * thread_id) * 3, width,
+            height / THREAD_NUM);
     }
 #else
-#define THREAD_NUM (4)
+    int          THREAD_NUM = 1;
+    for (int i = 8; i >= 2; i--)
+    {
+        if (char_width * char_height % i == 0)
+        {
+            THREAD_NUM = i;
+            break;
+        }
+    }
+
+    // printf("THREAD_NUM %d\n", THREAD_NUM);
+
     pthread_t                thread_id[THREAD_NUM];
     struct trans_thread_args args[THREAD_NUM];
     int                      num;
@@ -637,12 +654,16 @@ static inline int print_raw_img(unsigned char *image, int width, int height)
 #if 1
     for (int i = 0; i < (char_width * char_height);)
     {
-        if ((i % char_width) == 0 || cur_chardata->bg_color != last_chardata->bg_color)
-            print_term_color(1, cur_chardata->bg_color[0], cur_chardata->bg_color[1],
-                       cur_chardata->bg_color[2]);
-        if ((i % char_width) == 0 || cur_chardata->fg_color != last_chardata->fg_color)
-            print_term_color(0, cur_chardata->fg_color[0], cur_chardata->fg_color[1],
-                       cur_chardata->fg_color[2]);
+        if ((i % char_width) == 0 ||
+            cur_chardata->bg_color != last_chardata->bg_color)
+            print_term_color(1, cur_chardata->bg_color[0],
+                             cur_chardata->bg_color[1],
+                             cur_chardata->bg_color[2]);
+        if ((i % char_width) == 0 ||
+            cur_chardata->fg_color != last_chardata->fg_color)
+            print_term_color(0, cur_chardata->fg_color[0],
+                             cur_chardata->fg_color[1],
+                             cur_chardata->fg_color[2]);
         print_codepoint(cur_chardata->codepoint);
         i++;
         if ((i % char_width) == 0)
@@ -658,14 +679,14 @@ static inline int print_raw_img(unsigned char *image, int width, int height)
 }
 
 int print_img(unsigned char *img,
-              int          size,
-              unsigned int opt_width,
-              unsigned int opt_height,
-              int          compat)
+              int            size,
+              unsigned int   opt_width,
+              unsigned int   opt_height,
+              int            compat)
 {
     int            rwidth, rheight, rchannels;
-    unsigned char *read_data = stbi_load_from_memory(
-        img, size, &rwidth, &rheight, &rchannels, 3);
+    unsigned char *read_data =
+        stbi_load_from_memory(img, size, &rwidth, &rheight, &rchannels, 3);
 
     if (read_data == NULL)
     {

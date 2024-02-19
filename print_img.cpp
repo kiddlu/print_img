@@ -30,7 +30,7 @@
 #define TERM_PADDING_X 8
 #define TERM_PADDING_Y 4
 
-static inline void get_term_size(int *width, int *height)
+static void get_term_size(int *width, int *height)
 {
     struct winsize w;
     int            ret;
@@ -55,11 +55,11 @@ static inline void get_term_size(int *width, int *height)
     }
 }
 
-static inline void get_ideal_image_size(int      *width,
-                                        int      *height,
-                                        const int image_width,
-                                        const int image_height,
-                                        int       squashing_enabled)
+static void get_ideal_image_size(int      *width,
+                                 int      *height,
+                                 const int image_width,
+                                 const int image_height,
+                                 int       squashing_enabled)
 {
     *width              = squashing_enabled
                               ? image_width * 2
@@ -95,11 +95,10 @@ static inline void get_ideal_image_size(int      *width,
     }
 }
 
-static inline int print_rgb_rawdata_compat(unsigned char *rgbraw,
-                                           unsigned int   width,
-                                           unsigned int   height)
+static int print_rgb_rawdata_compat(unsigned char *rgbraw,
+                                    unsigned int   width,
+                                    unsigned int   height)
 {
-
     typedef struct
     {
         unsigned char r;
@@ -124,7 +123,7 @@ static inline int print_rgb_rawdata_compat(unsigned char *rgbraw,
     return 0;
 }
 
-const unsigned int BITMAPS[] = {
+static const unsigned int BITMAPS[] = {
     0x00000000, 0x00a0,
 
     // Block graphics
@@ -279,13 +278,13 @@ static inline int cstd_bitcount(unsigned int n)
 
 // Return a chardata struct with the given code point and corresponding averag
 // fg and bg colors.
-static inline chardata_t create_chardata(unsigned char *rgbraw,
-                                         int            x0,
-                                         int            y0,
-                                         int            width,
-                                         int            heigh,
-                                         int            codepoint,
-                                         int            pattern)
+static chardata_t create_chardata(unsigned char *rgbraw,
+                                  int            x0,
+                                  int            y0,
+                                  int            width,
+                                  int            heigh,
+                                  int            codepoint,
+                                  int            pattern)
 {
     chardata_t result;
     memset(&result, 0, sizeof(chardata_t));
@@ -336,11 +335,11 @@ static inline chardata_t create_chardata(unsigned char *rgbraw,
 
 // Find the best character and colors for a 4x8 part of the image at the given
 // position
-static inline chardata_t find_chardata(unsigned char *rgbraw,
-                                       int            x0,
-                                       int            y0,
-                                       int            width,
-                                       int            height)
+static chardata_t find_chardata(unsigned char *rgbraw,
+                                int            x0,
+                                int            y0,
+                                int            width,
+                                int            height)
 {
     int min[3]      = {255, 255, 255};
     int max[3]      = {0};
@@ -528,7 +527,7 @@ static inline int clamp_byte(int value)
     return value < 0 ? 0 : (value > 255 ? 255 : value);
 }
 
-static inline void print_term_color(int is_bg, int r, int g, int b)
+static void print_term_color(int is_bg, int r, int g, int b)
 {
     r = clamp_byte(r);
     g = clamp_byte(g);
@@ -539,7 +538,7 @@ static inline void print_term_color(int is_bg, int r, int g, int b)
     return;
 }
 
-static inline void print_codepoint(int codepoint)
+static void print_codepoint(int codepoint)
 {
     if (codepoint < 128)
     {
@@ -569,10 +568,10 @@ static inline void print_codepoint(int codepoint)
     }
 }
 
-static inline int trans_to_chardata(chardata_t    *cha,
-                                    unsigned char *rgbraw,
-                                    int            width,
-                                    int            height)
+static int trans_to_chardata(chardata_t    *cha,
+                             unsigned char *rgbraw,
+                             int            width,
+                             int            height)
 {
     chardata_t *cdata = cha;
     for (int y = 0; y < height; y = y + 8)
@@ -602,9 +601,7 @@ void *trans_to_chardata_thread(void *arg)
     return NULL;
 }
 
-static inline int print_rgb_rawdata(unsigned char *rgbraw,
-                                    int            width,
-                                    int            height)
+static int print_rgb_rawdata(unsigned char *rgbraw, int width, int height)
 {
     int char_width  = (width / 4);
     int char_height = (height / 8);

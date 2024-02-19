@@ -100,9 +100,9 @@ static inline int print_raw_img_compat(unsigned char *img,
         unsigned char r;
         unsigned char g;
         unsigned char b;
-    } pxdata_t;
+    } pxcolor_t;
 
-    pxdata_t *data = (pxdata_t *)img;
+    pxcolor_t *data = (pxcolor_t *)img;
     for (unsigned int d = 0; d < width * height; d++)
     {
         if (d % width == 0 && d != 0)
@@ -111,7 +111,7 @@ static inline int print_raw_img_compat(unsigned char *img,
             printf("\n");
         }
 
-        pxdata_t *c = data + d;
+        pxcolor_t *c = data + d;
         printf("\033[48;2;%03u;%03u;%03um ", c->r, c->g, c->b);
     }
     printf("\033[0m");
@@ -432,20 +432,20 @@ static inline chardata_t find_chardata(unsigned char *image,
     else
     {
         // Determine the color channel with the greatest range.
-        int splitIndex = 0;
-        int bestSplit  = 0;
+        int split_index = 0;
+        int best_split  = 0;
         for (int i = 0; i < 3; i++)
         {
-            if (max[i] - min[i] > bestSplit)
+            if (max[i] - min[i] > best_split)
             {
-                bestSplit  = max[i] - min[i];
-                splitIndex = i;
+                best_split  = max[i] - min[i];
+                split_index = i;
             }
         }
 
         // We just split at the middle of the interval instead of computing the
         // median.
-        int splitValue = min[splitIndex] + bestSplit / 2;
+        int split_value = min[split_index] + best_split / 2;
 
         // Compute a bitmap using the given split and sum the color values for
         // both buckets.
@@ -455,7 +455,7 @@ static inline chardata_t find_chardata(unsigned char *image,
             {
                 bits        = bits << 1;
                 pixel_index = ((x0 + x) + width * (y0 + y)) * 3;
-                if (*(image + pixel_index + splitIndex) > splitValue)
+                if (*(image + pixel_index + split_index) > split_value)
                 {
                     bits |= 1;
                 }

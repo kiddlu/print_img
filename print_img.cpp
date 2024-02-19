@@ -600,8 +600,6 @@ static inline int print_raw_img(unsigned char *image, int width, int height)
     int char_length = char_width * char_height * sizeof(chardata_t);
 
     chardata_t *chardata_scheme = (chardata_t *)malloc(char_length);
-    chardata_t *cur_chardata    = chardata_scheme;
-    chardata_t *last_chardata   = chardata_scheme;
 
 //    printf("char_width %d, height %d, length %d\n", char_width, char_height,
 //           char_length);
@@ -612,7 +610,7 @@ static inline int print_raw_img(unsigned char *image, int width, int height)
     for (int thread_id = 0; thread_id < THREAD_NUM; thread_id++)
     {
         trans_to_chardata(
-            &cur_chardata[char_width * char_height / THREAD_NUM * thread_id],
+            &chardata_scheme[char_width * char_height / THREAD_NUM * thread_id],
             image + (width * height / THREAD_NUM * thread_id) * 3, width,
             height / THREAD_NUM);
     }
@@ -635,7 +633,7 @@ static inline int print_raw_img(unsigned char *image, int width, int height)
     for (num = 0; num < THREAD_NUM; num++)
     {
         args[num].ansi_char =
-            &cur_chardata[char_width * char_height / THREAD_NUM * num];
+            &chardata_scheme[char_width * char_height / THREAD_NUM * num];
         args[num].image  = image + (width * height / THREAD_NUM * num) * 3;
         args[num].width  = width;
         args[num].height = height / THREAD_NUM;
@@ -652,25 +650,28 @@ static inline int print_raw_img(unsigned char *image, int width, int height)
 
 // draw
 #if 1
+    chardata_t *curr_chardata = chardata_scheme;
+    chardata_t *prev_chardata = chardata_scheme;
+
     for (int i = 0; i < (char_width * char_height);)
     {
         if ((i % char_width) == 0 ||
-            cur_chardata->bg_color != last_chardata->bg_color)
-            print_term_color(1, cur_chardata->bg_color[0],
-                             cur_chardata->bg_color[1],
-                             cur_chardata->bg_color[2]);
+            curr_chardata->bg_color != prev_chardata->bg_color)
+            print_term_color(1, curr_chardata->bg_color[0],
+                             curr_chardata->bg_color[1],
+                             curr_chardata->bg_color[2]);
         if ((i % char_width) == 0 ||
-            cur_chardata->fg_color != last_chardata->fg_color)
-            print_term_color(0, cur_chardata->fg_color[0],
-                             cur_chardata->fg_color[1],
-                             cur_chardata->fg_color[2]);
-        print_codepoint(cur_chardata->codepoint);
+            curr_chardata->fg_color != prev_chardata->fg_color)
+            print_term_color(0, curr_chardata->fg_color[0],
+                             curr_chardata->fg_color[1],
+                             curr_chardata->fg_color[2]);
+        print_codepoint(curr_chardata->codepoint);
         i++;
         if ((i % char_width) == 0)
             printf("\x1b[0m\n");
 
-        last_chardata = cur_chardata;
-        cur_chardata++;
+        prev_chardata = curr_chardata;
+        curr_chardata++;
     }
 #endif
 

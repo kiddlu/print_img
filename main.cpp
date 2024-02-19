@@ -16,13 +16,35 @@ unsigned int get_file_size(FILE *fp)
     return length;
 }
 
-void usage(void)
+static int usage(const char *arg0, int code)
 {
-    printf("useage: pimg [-w width] [-h height] [-c compat] image_path\n");
+    printf(
+        "Usage:\n"
+        "  %s [OPTIONS] img_path\n"
+        "\n"
+        "Options:\n"
+        "  -w width   resize to opt width\n"
+        "  -h height  resize to opt height\n"
+        "  -c         print image in compat mode\n"
+        "\n"
+        "Arguments:\n"
+        "  img_path   image to print\n"
+        "\n",
+        arg0);
+
+    return code;
 }
 
 int main(int argc, char *argv[])
 {
+    if (argc < 2)
+    {
+        return usage(argv[0], -1);
+    }
+    else if (0 != access(argv[argc - 1], F_OK))
+    {
+        return usage(argv[0], -1);
+    }
 
     unsigned int opt_width  = 0;
     unsigned int opt_height = 0;
@@ -43,14 +65,8 @@ int main(int argc, char *argv[])
                 compat = 1;
                 break;
             default:
-                break;
+                return usage(argv[0], 1);
         }
-    }
-
-    if (0 != access(argv[argc - 1], F_OK))
-    {
-        usage();
-        return -1;
     }
 
     FILE    *fp  = fopen(argv[argc - 1], "rb");
